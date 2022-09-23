@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/opensearch-project/opensearch-go/v2"
@@ -17,18 +18,22 @@ import (
 
 var OpenSearchClient *opensearch.Client
 
+const defaultOpensearchAddr = "https://127.0.0.1:9200"
+
 func NewOpenSearchClient(urls ...string) (*opensearch.Client, error) {
 	if len(urls) == 0 {
-		urls = []string{"https://127.0.0.1:9200"}
+		urls = []string{defaultOpensearchAddr}
 	}
+	log.Printf("INF Opensearch servers: %v", urls)
+
 	return opensearch.NewClient(opensearch.Config{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 		Addresses:     urls,
 		MaxRetries:    5,
-		Username:      "admin",
-		Password:      "admin",
+		Username:      "admin", // TODO
+		Password:      "admin", // TODO
 		RetryOnStatus: []int{502, 503, 504},
 	})
 }
@@ -158,4 +163,28 @@ func DeleteIndex(ctx context.Context, name string) error {
 	}
 
 	return nil
+}
+
+func init() {
+	// TODO:
+	// username := os.Getenv("OPENSEARCH_USERNAME")
+	// password := os.Getenv("OPENSEARCH_SECRET")
+
+	envUrls := os.Getenv("OPENSEARCH_URLS")
+	uncleanUrls := strings.Split(envUrls, ",")
+
+	out := make([]string, 0, 1)
+	for _, u := range uncleanUrls {
+		clean := strings.TrimSpace(u)
+		if clean == "" {
+			continue
+		}
+		out = append(out, clean)
+	}
+
+	var err error
+	OpenSearchClient, err = NewOpenSearchClient(out...)
+	if err != nil {
+		log.Panicf("opensearch client failed to initialize: %v", err)
+	}
 }

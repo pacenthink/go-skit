@@ -9,7 +9,6 @@ import (
 )
 
 func Test_Create_Delete_Index(t *testing.T) {
-	OpenSearchClient, _ = NewOpenSearchClient()
 
 	ctx := context.Background()
 
@@ -19,8 +18,8 @@ func Test_Create_Delete_Index(t *testing.T) {
 	err = CreateDocument(ctx, "project-test", "test-id", strings.NewReader(`{"foo":"bar"}`))
 	assert.Nil(t, err)
 
-	// err = UpdateDocument(ctx, "project-test", "test-id", strings.NewReader(`{"foo": "flv"}`))
-	// assert.Nil(t, err)
+	err = UpdateDocument(ctx, "project-test", "test-id", strings.NewReader(`{"foo": "flv"}`))
+	assert.Nil(t, err)
 
 	err = DeleteDocument(ctx, "project-test", "test-id")
 	assert.Nil(t, err)
