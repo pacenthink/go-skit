@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pacenthink/bnd-project/go-skit/util"
+	"github.com/pacenthink/go-skit/util"
 )
 
 func Authenticate() gin.HandlerFunc {
