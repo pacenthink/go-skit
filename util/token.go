@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 )
 
 var (
 	jwtValidateKey string
+	jwtSignKey     string
 )
 
 func ParseBearerJwtFromAuthHeader(header string) (*jwt.Token, error) {
@@ -31,26 +33,35 @@ func ParseBearerJwtFromAuthHeader(header string) (*jwt.Token, error) {
 	// useful if you use multiple keys for your application.  The standard is to use 'kid' in the
 	// head of the token to identify which key to use, but the parsed token (head and claims) is provided
 	// to the callback, providing flexibility.
-	token, err := jwt.Parse(parts[1], func(token *jwt.Token) (interface{}, error) {
-		// Don't forget to validate the alg is what you expect:
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+	return jwt.Parse(parts[1], func(token *jwt.Token) (interface{}, error) {
+		switch method := token.Method.(type) {
+		case *jwt.SigningMethodHMAC:
+			return []byte(jwtValidateKey), nil
+		default:
+			return nil, fmt.Errorf("unsupported signing method: %v", method)
 		}
-		// hmacSampleSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
-		return []byte(jwtValidateKey), nil
 	})
+}
 
+// GenerateTokens generates and returns a HMAC token and refresh token or an error
+func GenerateTokens(tokenTTL, refreshTokenTTL time.Duration) (signedToken string, signedRefreshToken string, err error) {
+	claims := &jwt.RegisteredClaims{
+		ExpiresAt: jwt.NewNumericDate(time.Now().Local().Add(tokenTTL)),
+	}
+	signedToken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(jwtSignKey))
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	if !token.Valid {
-		return nil, errors.New("token not valid")
+	refreshClaims := &jwt.RegisteredClaims{
+		ExpiresAt: jwt.NewNumericDate(time.Now().Local().Add(refreshTokenTTL)),
 	}
+	signedRefreshToken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(jwtSignKey))
 
-	return token, nil
+	return
 }
 
 func init() {
 	jwtValidateKey = os.Getenv("JWT_VALIDATE_KEY")
+	jwtSignKey = os.Getenv("JWT_SIGN_KEY")
 }
