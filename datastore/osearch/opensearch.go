@@ -1,4 +1,4 @@
-package datastore
+package osearch
 
 import (
 	"bytes"
@@ -7,38 +7,41 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/opensearch-project/opensearch-go/v2"
 	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 )
 
-var OpenSearchClient *opensearch.Client
+const (
+	DefaultMaxRetries = 5
+)
 
-const defaultOpensearchAddr = "https://127.0.0.1:9200"
+type OpenSearchClient struct {
+	handle *opensearch.Client
+}
 
-func NewOpenSearchClient(urls ...string) (*opensearch.Client, error) {
-	if len(urls) == 0 {
-		urls = []string{defaultOpensearchAddr}
-	}
-	log.Printf("INF Opensearch servers: %v", urls)
-
-	return opensearch.NewClient(opensearch.Config{
+func NewOpenSearchClient(username, password string, urls ...string) (*OpenSearchClient, error) {
+	client, err := opensearch.NewClient(opensearch.Config{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 		Addresses:     urls,
-		MaxRetries:    5,
-		Username:      "admin", // TODO
-		Password:      "admin", // TODO
+		MaxRetries:    DefaultMaxRetries,
+		Username:      username,
+		Password:      password,
 		RetryOnStatus: []int{502, 503, 504},
 	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &OpenSearchClient{handle: client}, nil
 }
 
-func CreateDocument(ctx context.Context, index, id string, obj interface{}) error {
+func (client *OpenSearchClient) CreateDocument(ctx context.Context, index, id string, obj interface{}) error {
 	body, err := json.Marshal(obj)
 	if err != nil {
 		return err
@@ -49,7 +52,7 @@ func CreateDocument(ctx context.Context, index, id string, obj interface{}) erro
 		DocumentID: id,
 		Body:       bytes.NewBuffer(body),
 	}
-	resp, err := req.Do(ctx, OpenSearchClient)
+	resp, err := req.Do(ctx, client.handle)
 	if err != nil {
 		return err
 	}
@@ -61,7 +64,7 @@ func CreateDocument(ctx context.Context, index, id string, obj interface{}) erro
 	return nil
 }
 
-func UpdateDocument(ctx context.Context, index, id string, obj interface{}) error {
+func (client *OpenSearchClient) UpdateDocument(ctx context.Context, index, id string, obj interface{}) error {
 	val, err := json.Marshal(map[string]interface{}{
 		"doc": obj,
 	})
@@ -74,7 +77,7 @@ func UpdateDocument(ctx context.Context, index, id string, obj interface{}) erro
 		DocumentID: id,
 		Body:       bytes.NewBuffer(val),
 	}
-	resp, err := req.Do(ctx, OpenSearchClient)
+	resp, err := req.Do(ctx, client.handle)
 	if err != nil {
 		return err
 	}
@@ -85,13 +88,13 @@ func UpdateDocument(ctx context.Context, index, id string, obj interface{}) erro
 	return nil
 }
 
-func DeleteDocument(ctx context.Context, index, id string) error {
+func (client *OpenSearchClient) DeleteDocument(ctx context.Context, index, id string) error {
 	req := opensearchapi.DeleteRequest{
 		Index:      index,
 		DocumentID: id,
 	}
 
-	resp, err := req.Do(ctx, OpenSearchClient)
+	resp, err := req.Do(ctx, client.handle)
 	if err != nil {
 		return err
 	}
@@ -102,12 +105,12 @@ func DeleteDocument(ctx context.Context, index, id string) error {
 	return nil
 }
 
-func GetDocument(ctx context.Context, index, id string) (io.ReadCloser, error) {
+func (client *OpenSearchClient) GetDocument(ctx context.Context, index, id string) (io.ReadCloser, error) {
 	req := opensearchapi.GetRequest{
 		Index:      index,
 		DocumentID: id,
 	}
-	resp, err := req.Do(ctx, OpenSearchClient)
+	resp, err := req.Do(ctx, client.handle)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +122,7 @@ func GetDocument(ctx context.Context, index, id string) (io.ReadCloser, error) {
 	return resp.Body, nil
 }
 
-func CreateIndexWithDefaults(ctx context.Context, name string) error {
+func (client *OpenSearchClient) CreateIndexWithDefaults(ctx context.Context, name string) error {
 	settings := strings.NewReader(`{
 		"settings": {
 			"index": {
@@ -128,20 +131,19 @@ func CreateIndexWithDefaults(ctx context.Context, name string) error {
 				}
 			}
 		}`)
-	return CreateIndexWithSettings(ctx, name, settings)
+	return client.CreateIndexWithSettings(ctx, name, settings)
 }
 
-func CreateIndexWithSettings(ctx context.Context, name string, settings io.Reader) error {
+func (client *OpenSearchClient) CreateIndexWithSettings(ctx context.Context, name string, settings io.Reader) error {
 	req := opensearchapi.IndicesCreateRequest{
 		Index: name,
 		Body:  settings,
 	}
-	resp, err := req.Do(ctx, OpenSearchClient)
+	resp, err := req.Do(ctx, client.handle)
 	if err != nil {
 		return err
 	}
 
-	log.Println(resp.String())
 	if resp.StatusCode > 299 {
 		return errors.New(resp.Status())
 	}
@@ -149,12 +151,12 @@ func CreateIndexWithSettings(ctx context.Context, name string, settings io.Reade
 	return nil
 }
 
-func DeleteIndex(ctx context.Context, name string) error {
+func (client *OpenSearchClient) DeleteIndex(ctx context.Context, name string) error {
 	req := opensearchapi.IndicesDeleteRequest{
 		Index: []string{name},
 	}
 
-	resp, err := req.Do(ctx, OpenSearchClient)
+	resp, err := req.Do(ctx, client.handle)
 	if err != nil {
 		return err
 	}
@@ -163,28 +165,4 @@ func DeleteIndex(ctx context.Context, name string) error {
 	}
 
 	return nil
-}
-
-func init() {
-	// TODO:
-	// username := os.Getenv("OPENSEARCH_USERNAME")
-	// password := os.Getenv("OPENSEARCH_SECRET")
-
-	envUrls := os.Getenv("OPENSEARCH_URLS")
-	uncleanUrls := strings.Split(envUrls, ",")
-
-	out := make([]string, 0, 1)
-	for _, u := range uncleanUrls {
-		clean := strings.TrimSpace(u)
-		if clean == "" {
-			continue
-		}
-		out = append(out, clean)
-	}
-
-	var err error
-	OpenSearchClient, err = NewOpenSearchClient(out...)
-	if err != nil {
-		log.Panicf("opensearch client failed to initialize: %v", err)
-	}
 }
