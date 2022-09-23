@@ -8,13 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// These are all non-prod values
-const (
-	defaultOpensearchAddr = "https://127.0.0.1:9200"
-	defaultUsername       = "admin"
-	defaultPasswd         = "admin"
-)
-
 func Test_Create_Delete_Index(t *testing.T) {
 	client, _ := NewOpenSearchClient(defaultUsername, defaultPasswd, defaultOpensearchAddr)
 

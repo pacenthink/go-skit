@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/opensearch-project/opensearch-go/v2"
@@ -18,8 +20,37 @@ const (
 	DefaultMaxRetries = 5
 )
 
+// These are all non-prod values
+const (
+	defaultOpensearchAddr = "https://127.0.0.1:9200"
+	defaultUsername       = "admin"
+	defaultPasswd         = "admin"
+)
+
 type OpenSearchClient struct {
 	handle *opensearch.Client
+}
+
+func DefaultClient() (*OpenSearchClient, error) {
+	username := os.Getenv("OPENSEARCH_USERNAME")
+	if username == "" {
+		username = defaultUsername
+	}
+	password := os.Getenv("OPENSEARCH_SECRET")
+	if password == "" {
+		password = defaultPasswd
+	}
+
+	urls := strings.Split(os.Getenv("OPENSEARCH_URLS"), ",")
+	if len(urls) == 0 {
+		return NewOpenSearchClient(username, password, defaultOpensearchAddr)
+	}
+	for i, e := range urls {
+		urls[i] = strings.TrimSpace(e)
+	}
+
+	log.Printf("INF OpenSearch urls: %v", urls)
+	return NewOpenSearchClient(username, password, urls...)
 }
 
 func NewOpenSearchClient(username, password string, urls ...string) (*OpenSearchClient, error) {
