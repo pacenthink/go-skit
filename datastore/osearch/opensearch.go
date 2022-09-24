@@ -42,11 +42,12 @@ func DefaultClient() (*OpenSearchClient, error) {
 	}
 
 	urls := strings.Split(os.Getenv("OPENSEARCH_URLS"), ",")
-	if len(urls) == 0 {
-		return NewOpenSearchClient(username, password, defaultOpensearchAddr)
-	}
 	for i, e := range urls {
 		urls[i] = strings.TrimSpace(e)
+	}
+
+	if len(urls) == 0 {
+		urls = []string{defaultOpensearchAddr}
 	}
 
 	log.Printf("INF OpenSearch urls: %v", urls)
