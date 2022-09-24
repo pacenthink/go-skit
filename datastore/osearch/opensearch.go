@@ -41,14 +41,7 @@ func DefaultClient() (*OpenSearchClient, error) {
 		password = defaultPasswd
 	}
 
-	urls := strings.Split(os.Getenv("OPENSEARCH_URLS"), ",")
-	for i, e := range urls {
-		urls[i] = strings.TrimSpace(e)
-	}
-
-	if len(urls) == 0 {
-		urls = []string{defaultOpensearchAddr}
-	}
+	urls := getUrls()
 
 	log.Printf("INF OpenSearch urls: %v", urls)
 	return NewOpenSearchClient(username, password, urls...)
@@ -197,4 +190,24 @@ func (client *OpenSearchClient) DeleteIndex(ctx context.Context, name string) er
 	}
 
 	return nil
+}
+
+func getUrls() []string {
+	urlstr := os.Getenv("OPENSEARCH_URLS")
+	if urlstr == "" {
+		return []string{defaultOpensearchAddr}
+	}
+
+	urls := strings.Split(urlstr, ",")
+	out := make([]string, 0, len(urls))
+	for _, u := range urls {
+		cu := strings.TrimSpace(u)
+		if cu != "" {
+			out = append(out, cu)
+		}
+	}
+	if len(out) == 0 {
+		return []string{defaultOpensearchAddr}
+	}
+	return out
 }
