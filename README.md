@@ -8,3 +8,5 @@ skit stands for 'Service Kit'.  This library is a service development kit for go
 - `JWT_VALIDATE_KEY`
 - `JWT_SIGN_KEY`
 - `OPENSEARCH_URLS`
+- `OPENSEARCH_USERNAME`
+- `OPENSEARCH_SECRET`
