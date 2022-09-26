@@ -192,6 +192,10 @@ func (client *OpenSearchClient) DeleteIndex(ctx context.Context, name string) er
 	return nil
 }
 
+func (client *OpenSearchClient) Raw() *opensearch.Client {
+	return client.handle
+}
+
 func getUrls() []string {
 	urlstr := os.Getenv("OPENSEARCH_URLS")
 	if urlstr == "" {
