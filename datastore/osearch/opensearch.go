@@ -31,6 +31,15 @@ type OpenSearchClient struct {
 	handle *opensearch.Client
 }
 
+type openSearchClientGetDocumentResponse struct {
+	Index   string      `json:"_index"`
+	Id      string      `json:"_id"`
+	Version int64       `json:"_version"`
+	SeqNo   int64       `json:"_seq_no"`
+	Found   bool        `json:"found"`
+	Source  interface{} `json:"_source"`
+}
+
 func DefaultClient() (*OpenSearchClient, error) {
 	username := os.Getenv("OPENSEARCH_USERNAME")
 	if username == "" {
@@ -130,7 +139,7 @@ func (client *OpenSearchClient) DeleteDocument(ctx context.Context, index, id st
 	return nil
 }
 
-func (client *OpenSearchClient) GetDocument(ctx context.Context, index, id string) (io.ReadCloser, error) {
+func (client *OpenSearchClient) GetDocument(ctx context.Context, index, id string) (*openSearchClientGetDocumentResponse, error) {
 	req := opensearchapi.GetRequest{
 		Index:      index,
 		DocumentID: id,
@@ -144,7 +153,18 @@ func (client *OpenSearchClient) GetDocument(ctx context.Context, index, id strin
 		return nil, errors.New(resp.String())
 	}
 
-	return resp.Body, nil
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var intrresp openSearchClientGetDocumentResponse
+	err = json.Unmarshal(data, &intrresp)
+	if err != nil {
+		return nil, err
+	}
+
+	return &intrresp, nil
 }
 
 func (client *OpenSearchClient) CreateIndexWithDefaults(ctx context.Context, name string) error {
