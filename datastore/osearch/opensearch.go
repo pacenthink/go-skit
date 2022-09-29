@@ -186,7 +186,7 @@ func (client *OpenSearchClient) CreateIndexWithSettings(ctx context.Context, nam
 	}
 
 	if resp.StatusCode > 299 {
-		return errors.New(resp.Status())
+		return errors.New(resp.String())
 	}
 
 	return nil
