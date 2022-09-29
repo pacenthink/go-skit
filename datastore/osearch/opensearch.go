@@ -212,6 +212,47 @@ func (client *OpenSearchClient) Raw() *opensearch.Client {
 	return client.handle
 }
 
+func (client *OpenSearchClient) Search(ctx context.Context, index string, q string) (*SearchResult, error) {
+	var req opensearchapi.SearchRequest
+	req.Index = append(req.Index, index)
+	req.Body = strings.NewReader(q)
+
+	resp, err := req.Do(context.Background(), client.handle)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, errors.New(resp.String())
+	}
+
+	var result SearchResult
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(data, &result)
+	return &result, err
+}
+
+type SearchResult struct {
+	Shards interface{}  `json:"_shards"`
+	Hits   hitsEnvelope `json:"hits"`
+}
+
+type hitsEnvelope struct {
+	MaxScore float64     `json:"max_score"`
+	Hits     []SearchHit `json:"hits"`
+}
+
+type SearchHit struct {
+	Index  string          `json:"_index"`
+	ID     string          `json:"_id"`
+	Score  float64         `json:"_score"`
+	Source json.RawMessage `json:"_source"`
+}
+
 func getUrls() []string {
 	urlstr := os.Getenv("OPENSEARCH_URLS")
 	if urlstr == "" {
