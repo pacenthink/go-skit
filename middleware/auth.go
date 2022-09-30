@@ -5,29 +5,29 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pacenthink/go-skit/util"
+	"github.com/pacenthink/go-skit/token"
 )
 
 func Authenticate() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.Request.Header.Get("Authorization")
-		token, err := util.ParseBearerJwtFromAuthHeader(authHeader)
+		tkn, err := token.ParseBearerJwtFromAuthHeader(authHeader)
 		if err != nil {
 			c.AbortWithError(http.StatusUnauthorized, err)
 			return
 		}
 
-		if !token.Valid {
+		if !tkn.Valid {
 			c.AbortWithError(http.StatusUnauthorized, errors.New("token invalid"))
 			return
 		}
 
-		if err = token.Claims.Valid(); err != nil {
+		if err = tkn.Claims.Valid(); err != nil {
 			c.AbortWithError(http.StatusUnauthorized, err)
 			return
 		}
 
-		c.Set("token", token)
+		c.Set("token", tkn)
 		c.Next()
 	}
 }
