@@ -31,7 +31,7 @@ func ParseBearerJwtFromAuthHeader(header string) (*jwt.Token, error) {
 }
 
 func ValidateToken(token string) (*jwt.Token, error) {
-	return jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+	return jwt.ParseWithClaims(token, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		switch method := token.Method.(type) {
 		case *jwt.SigningMethodHMAC:
 			jwtValidateKey := os.Getenv("JWT_VALIDATE_KEY")
