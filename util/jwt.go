@@ -13,7 +13,7 @@ const (
 	defaultRefreshTokenTTL = 168 * time.Hour
 )
 
-type Pair struct {
+type TokenPair struct {
 	Token   string `json:"access_token"`
 	Refresh string `json:"refresh_token"`
 }
@@ -44,7 +44,7 @@ func NewClaims() *Claims {
 }
 
 // NewPairWithClaims creates a new token and refresh token pair
-func NewPairWithClaims(c *Claims, signMethod jwt.SigningMethod) (*Pair, error) {
+func NewTokenPairWithClaims(c *Claims, signMethod jwt.SigningMethod) (*TokenPair, error) {
 	jwtSignKey := os.Getenv("JWT_SIGN_KEY")
 	if jwtSignKey == "" {
 		return nil, errors.New("sign key not set")
@@ -64,5 +64,5 @@ func NewPairWithClaims(c *Claims, signMethod jwt.SigningMethod) (*Pair, error) {
 		return nil, err
 	}
 
-	return &Pair{token, refresh}, nil
+	return &TokenPair{token, refresh}, nil
 }
