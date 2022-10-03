@@ -32,6 +32,31 @@ type Claims struct {
 	*jwt.RegisteredClaims
 }
 
+// Clone creates a copy of the Claims leaving out all date time fields to be
+// set by the caller
+func (c *Claims) Clone() *Claims {
+	out := &Claims{
+		IDP:   c.ID,
+		Alias: c.Alias,
+	}
+
+	if out.Roles != nil {
+		out.Roles = make([]string, len(c.Roles))
+		copy(out.Roles, c.Roles)
+	}
+
+	if c.RegisteredClaims != nil {
+		out.RegisteredClaims = &jwt.RegisteredClaims{
+			ID:       c.ID,
+			Issuer:   c.Issuer,
+			Audience: c.Audience,
+			Subject:  c.Subject,
+		}
+	}
+
+	return out
+}
+
 func NewClaims() *Claims {
 	return &Claims{
 		RegisteredClaims: &jwt.RegisteredClaims{
