@@ -25,6 +25,9 @@ type Claims struct {
 	// Username based on idp
 	Alias string `json:"alias"`
 
+	// Roles. These are arbitrary application specific strings
+	Roles []string `json:"roles"`
+
 	// Standard JWT claims
 	*jwt.RegisteredClaims
 }
@@ -49,6 +52,8 @@ func NewTokenPairWithClaims(c *Claims, signMethod jwt.SigningMethod) (*TokenPair
 	if jwtSignKey == "" {
 		return nil, errors.New("sign key not set")
 	}
+
+	c.Issuer = os.Getenv("JWT_ISSUER")
 
 	c.IssuedAt = jwt.NewNumericDate(time.Now().Local())
 	c.ExpiresAt = jwt.NewNumericDate(time.Now().Local().Add(defaultTokenTTL))
