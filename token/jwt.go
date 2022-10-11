@@ -32,6 +32,24 @@ type Claims struct {
 	*jwt.RegisteredClaims
 }
 
+func (c *Claims) HasAnyRole(roles ...string) bool {
+	for _, r := range roles {
+		if c.HasRole(r) {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *Claims) HasRole(role string) bool {
+	for _, v := range c.Roles {
+		if v == role {
+			return true
+		}
+	}
+	return false
+}
+
 // Clone creates a copy of the Claims leaving out all date time fields to be
 // set by the caller
 func (c *Claims) Clone() *Claims {
