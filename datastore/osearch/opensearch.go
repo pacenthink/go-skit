@@ -241,9 +241,14 @@ type SearchResult struct {
 	Hits   hitsEnvelope `json:"hits"`
 }
 
+type total struct {
+	Value    int    `json:"value"`
+	Relation string `json:"relation"`
+}
 type hitsEnvelope struct {
 	MaxScore float64     `json:"max_score"`
 	Hits     []SearchHit `json:"hits"`
+	Total    total       `json:"total"`
 }
 
 type SearchHit struct {
