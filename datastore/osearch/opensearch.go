@@ -208,6 +208,22 @@ func (client *OpenSearchClient) DeleteIndex(ctx context.Context, name string) er
 	return nil
 }
 
+func (client *OpenSearchClient) DeleteIndexes(ctx context.Context, indices []string) error {
+	req := opensearchapi.IndicesDeleteRequest{
+		Index: indices,
+	}
+
+	resp, err := req.Do(ctx, client.handle)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode > 299 {
+		return errors.New(resp.Status())
+	}
+
+	return nil
+}
+
 func (client *OpenSearchClient) Raw() *opensearch.Client {
 	return client.handle
 }
