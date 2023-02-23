@@ -208,9 +208,9 @@ func (client *OpenSearchClient) DeleteIndex(ctx context.Context, name string) er
 	return nil
 }
 
-func (client *OpenSearchClient) DeleteIndexes(ctx context.Context, indices []string) error {
+func (client *OpenSearchClient) DeleteIndexes(ctx context.Context, indexes []string) error {
 	req := opensearchapi.IndicesDeleteRequest{
-		Index: indices,
+		Index: indexes,
 	}
 
 	resp, err := req.Do(ctx, client.handle)
